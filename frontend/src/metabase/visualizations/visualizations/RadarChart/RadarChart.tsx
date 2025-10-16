@@ -93,7 +93,9 @@ export function RadarChart(props: VisualizationProps) {
     () => ({
       ...getRadarChartOption(chartModel, visibleSeries, renderingContext, {
         showMarkers: showDataPoints,
+        showLabels: showDataPoints,
         markerSeriesKeys: showDataPoints ? markerSeriesKeys : [],
+        formatters,
       }),
       tooltip: getTooltipOption(containerRef, chartModel, formatters),
     }),

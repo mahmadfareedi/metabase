@@ -1,10 +1,13 @@
 import type { RenderingContext } from "metabase/visualizations/types";
 
+import type { RadarChartFormatters } from "./format";
 import type { RadarChartModel, RadarSeriesModel } from "./model/types";
 
 interface RadarOptionConfig {
   showMarkers: boolean;
+  showLabels: boolean;
   markerSeriesKeys: string[];
+  formatters: RadarChartFormatters;
 }
 
 interface RadarSeriesDataItem {
@@ -19,14 +22,23 @@ interface RadarSeriesDataItem {
   };
   symbol?: string;
   symbolSize?: number;
+  label?: {
+    show: boolean;
+    color: string;
+    distance?: number;
+    formatter: (params: any) => string;
+  };
 }
 
 const getSeriesData = (
   series: RadarSeriesModel,
   showMarkers: boolean,
+  showLabels: boolean,
   renderingContext: RenderingContext,
+  formatters: RadarChartFormatters,
 ): RadarSeriesDataItem => {
   const shouldShowMarker = showMarkers;
+  const shouldShowLabel = shouldShowMarker && showLabels;
   return {
     name: series.name,
     value: series.values.map((value) => (value == null ? Number.NaN : value)),
@@ -41,6 +53,55 @@ const getSeriesData = (
     },
     symbol: shouldShowMarker ? "circle" : "none",
     symbolSize: shouldShowMarker ? 5 : 0,
+    label: shouldShowLabel
+      ? {
+          show: true,
+          color: renderingContext.getColor("text-primary"),
+          distance: 6,
+          formatter: (params: any) => {
+            const data = params?.data as RadarSeriesDataItem | undefined;
+            const seriesKey = data?.seriesKey ?? series.key;
+
+            const valueFromParams = (() => {
+              if (typeof params?.value === "number") {
+                return params.value as number | null;
+              }
+              if (Array.isArray(params?.value)) {
+                const indicatorIndex =
+                  typeof params?.indicatorIndex === "number"
+                    ? params.indicatorIndex
+                    : typeof params?.dimensionIndex === "number"
+                      ? params.dimensionIndex
+                      : typeof params?.dataIndex === "number"
+                        ? params.dataIndex
+                        : 0;
+                const raw = params.value[indicatorIndex];
+                return typeof raw === "number" ? raw : null;
+              }
+              return null;
+            })();
+
+            if (valueFromParams != null) {
+              return formatters.formatMetric(valueFromParams, seriesKey);
+            }
+
+            if (Array.isArray(data?.rawValues)) {
+              const indicatorIndex =
+                typeof params?.indicatorIndex === "number"
+                  ? params.indicatorIndex
+                  : typeof params?.dimensionIndex === "number"
+                    ? params.dimensionIndex
+                    : typeof params?.dataIndex === "number"
+                      ? params.dataIndex
+                      : 0;
+              const rawValue = data.rawValues[indicatorIndex];
+              return formatters.formatMetric(rawValue, seriesKey);
+            }
+
+            return formatters.formatMetric(null, seriesKey);
+          },
+        }
+      : undefined,
   };
 };
 
@@ -48,7 +109,7 @@ export const getRadarChartOption = (
   chartModel: RadarChartModel,
   visibleSeries: RadarSeriesModel[],
   renderingContext: RenderingContext,
-  { showMarkers, markerSeriesKeys }: RadarOptionConfig,
+  { showMarkers, showLabels, markerSeriesKeys, formatters }: RadarOptionConfig,
 ) => {
   const fontSize = renderingContext.theme.cartesian.label.fontSize;
   const splitLineColor =
@@ -123,7 +184,9 @@ export const getRadarChartOption = (
               (markerSeriesKeys.length === 0 ||
                 markerKeys.has(normalizeKey(series.key)) ||
                 markerKeys.has(normalizeKey(series.name))),
+            showLabels,
             renderingContext,
+            formatters,
           ),
         ),
       },

@@ -4,6 +4,7 @@ import { color } from "metabase/lib/colors";
 import type { StaticChartProps } from "metabase/static-viz/components/StaticVisualization";
 import { sanitizeSvgForBatik } from "metabase/static-viz/lib/svg";
 import { registerEChartsModules } from "metabase/visualizations/echarts";
+import { getRadarChartFormatters } from "metabase/visualizations/echarts/radar/format";
 import { getRadarChartModel } from "metabase/visualizations/echarts/radar/model";
 import { getRadarChartOption } from "metabase/visualizations/echarts/radar/option";
 
@@ -31,6 +32,7 @@ export const RadarChart = ({
   });
 
   const chartModel = getRadarChartModel(rawSeries, settings);
+  const formatters = getRadarChartFormatters(chartModel, settings);
   const showDataPoints = Boolean(settings["radar.show_data_points"]);
   const markerSeriesKeys = Array.isArray(settings["radar.data_points_series"])
     ? (
@@ -58,7 +60,9 @@ export const RadarChart = ({
     renderingContext,
     {
       showMarkers: showDataPoints,
+      showLabels: showDataPoints,
       markerSeriesKeys: showDataPoints ? markerSeriesKeys : [],
+      formatters,
     },
   );
 
