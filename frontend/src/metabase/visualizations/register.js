@@ -20,6 +20,7 @@ import ObjectDetail from "./visualizations/ObjectDetail";
 import { PieChart } from "./visualizations/PieChart";
 import PivotTable from "./visualizations/PivotTable";
 import Progress from "./visualizations/Progress";
+import { RadarChart } from "./visualizations/RadarChart";
 import RowChart from "./visualizations/RowChart";
 import { SankeyChart } from "./visualizations/SankeyChart";
 import { Scalar } from "./visualizations/Scalar";
@@ -43,6 +44,7 @@ export default function () {
   registerVisualization(RowChart);
   registerVisualization(ScatterPlot);
   registerVisualization(PieChart);
+  registerVisualization(RadarChart);
   registerVisualization(Map);
   registerVisualization(Funnel);
   registerVisualization(ObjectDetail);

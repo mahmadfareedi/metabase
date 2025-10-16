@@ -103,6 +103,7 @@ Metabase's reference documentation.
 - [Pie or donut charts](./questions/visualizations/pie-or-donut-chart.md)
 - [Pivot table](./questions/visualizations/pivot-table.md)
 - [Progress bar](./questions/visualizations/progress-bar.md)
+- [Radar chart](./questions/visualizations/radar-chart.md)
 - [Sankey chart](./questions/visualizations/sankey.md)
 - [Scatterplot or bubble chart](./questions/visualizations/scatterplot-or-bubble-chart.md)
 - [Table](./questions/visualizations/table.md)

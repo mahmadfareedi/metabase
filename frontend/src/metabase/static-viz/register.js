@@ -9,6 +9,7 @@ import { Funnel } from "metabase/visualizations/visualizations/Funnel";
 import { LineChart } from "metabase/visualizations/visualizations/LineChart";
 import { PieChart } from "metabase/visualizations/visualizations/PieChart";
 import Progress from "metabase/visualizations/visualizations/Progress";
+import { RadarChart } from "metabase/visualizations/visualizations/RadarChart";
 import RowChart from "metabase/visualizations/visualizations/RowChart";
 import { SankeyChart } from "metabase/visualizations/visualizations/SankeyChart";
 import { Scalar } from "metabase/visualizations/visualizations/Scalar";
@@ -26,6 +27,7 @@ export const registerStaticVisualizations = () => {
   registerVisualization(WaterfallChart);
   registerVisualization(ComboChart);
   registerVisualization(ScatterPlot);
+  registerVisualization(RadarChart);
   registerVisualization(PieChart);
   registerVisualization(SankeyChart);
   registerVisualization(RowChart);
