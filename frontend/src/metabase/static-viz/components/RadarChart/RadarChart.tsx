@@ -31,11 +31,26 @@ export const RadarChart = ({
   });
 
   const chartModel = getRadarChartModel(rawSeries, settings);
-  const showDataPoints = settings["radar.show_data_points"] === true;
+  const showDataPoints = Boolean(settings["radar.show_data_points"]);
   const markerSeriesKeys = Array.isArray(settings["radar.data_points_series"])
-    ? (settings["radar.data_points_series"] as (string | null)[]).filter(
-        (value): value is string => value != null && value !== "",
+    ? (
+        settings["radar.data_points_series"] as Array<
+          string | null | { value?: unknown }
+        >
       )
+        .map((value) => {
+          if (value == null) {
+            return null;
+          }
+          if (typeof value === "string") {
+            return value;
+          }
+          if (typeof value === "object" && "value" in value) {
+            return value.value != null ? String(value.value) : null;
+          }
+          return String(value);
+        })
+        .filter((value): value is string => value != null && value !== "")
     : [];
   const option = getRadarChartOption(
     chartModel,

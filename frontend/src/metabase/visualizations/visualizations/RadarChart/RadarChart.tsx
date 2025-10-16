@@ -60,15 +60,28 @@ export function RadarChart(props: VisualizationProps) {
     [chartModel, settings],
   );
 
-  const showDataPoints = settings["radar.show_data_points"] === true;
+  const showDataPoints = Boolean(settings["radar.show_data_points"]);
   const markerSeriesKeys = useMemo(() => {
     const configuredSeries = Array.isArray(settings["radar.data_points_series"])
-      ? (settings["radar.data_points_series"] as (string | null)[])
+      ? (settings["radar.data_points_series"] as Array<
+          string | null | { value?: unknown }
+        >)
       : [];
 
-    return configuredSeries.filter(
-      (value): value is string => value != null && value !== "",
-    );
+    return configuredSeries
+      .map((value) => {
+        if (value == null) {
+          return null;
+        }
+        if (typeof value === "string") {
+          return value;
+        }
+        if (typeof value === "object" && "value" in value) {
+          return value.value != null ? String(value.value) : null;
+        }
+        return String(value);
+      })
+      .filter((value): value is string => value != null && value !== "");
   }, [settings]);
 
   const visibleSeries = useMemo(

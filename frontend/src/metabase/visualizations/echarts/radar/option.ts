@@ -14,6 +14,8 @@ interface RadarSeriesDataItem {
   seriesKey: string;
   itemStyle: {
     color: string;
+    borderColor?: string;
+    borderWidth?: number;
   };
   symbol?: string;
   symbolSize?: number;
@@ -22,7 +24,9 @@ interface RadarSeriesDataItem {
 const getSeriesData = (
   series: RadarSeriesModel,
   showMarkers: boolean,
+  renderingContext: RenderingContext,
 ): RadarSeriesDataItem => {
+  const shouldShowMarker = showMarkers;
   return {
     name: series.name,
     value: series.values.map((value) => (value == null ? Number.NaN : value)),
@@ -30,9 +34,13 @@ const getSeriesData = (
     seriesKey: series.key,
     itemStyle: {
       color: series.color,
+      borderColor: shouldShowMarker
+        ? renderingContext.getColor("bg-white")
+        : undefined,
+      borderWidth: shouldShowMarker ? 1 : undefined,
     },
-    symbol: showMarkers ? "circle" : "none",
-    symbolSize: showMarkers ? 5 : undefined,
+    symbol: shouldShowMarker ? "circle" : "none",
+    symbolSize: shouldShowMarker ? 5 : 0,
   };
 };
 
@@ -45,7 +53,13 @@ export const getRadarChartOption = (
   const fontSize = renderingContext.theme.cartesian.label.fontSize;
   const splitLineColor =
     renderingContext.theme.cartesian.splitLine.lineStyle.color;
-  const markerKeys = new Set(markerSeriesKeys);
+  const normalizeKey = (value: string | null | undefined) =>
+    value != null ? value.toString().toLowerCase() : null;
+  const markerKeys = new Set(
+    markerSeriesKeys
+      .map((key) => normalizeKey(key))
+      .filter((key): key is string => key != null),
+  );
 
   return {
     color: visibleSeries.map((series) => series.color),
@@ -93,6 +107,8 @@ export const getRadarChartOption = (
         },
         symbol: showMarkers ? "circle" : "none",
         symbolSize: showMarkers ? 5 : 0,
+        showSymbol: showMarkers,
+        showAllSymbol: showMarkers ? "auto" : false,
         lineStyle: {
           width: 2,
         },
@@ -104,7 +120,10 @@ export const getRadarChartOption = (
           getSeriesData(
             series,
             showMarkers &&
-              (markerSeriesKeys.length === 0 || markerKeys.has(series.key)),
+              (markerSeriesKeys.length === 0 ||
+                markerKeys.has(normalizeKey(series.key)) ||
+                markerKeys.has(normalizeKey(series.name))),
+            renderingContext,
           ),
         ),
       },
