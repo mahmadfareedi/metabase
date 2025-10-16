@@ -70,5 +70,42 @@ export const RADAR_CHART_DEFINITION: VisualizationDefinition = {
       default: true,
       inline: true,
     },
+    "radar.show_data_points": {
+      // eslint-disable-next-line ttag/no-module-declaration -- see metabase#55045
+      section: t`Display`,
+      // eslint-disable-next-line ttag/no-module-declaration -- see metabase#55045
+      title: t`Show data points`,
+      widget: "toggle",
+      default: false,
+      inline: true,
+    },
+    "radar.data_points_series": {
+      // eslint-disable-next-line ttag/no-module-declaration -- see metabase#55045
+      section: t`Display`,
+      // eslint-disable-next-line ttag/no-module-declaration -- see metabase#55045
+      title: t`Data points metrics`,
+      widget: "multiselect",
+      getHidden: (_series, settings) =>
+        settings["radar.show_data_points"] !== true,
+      getProps: (rawSeries, settings) => {
+        const [{ data } = { data: undefined }] = rawSeries;
+        const columns = data?.cols ?? [];
+        const metricNames = (settings["graph.metrics"] ?? []).filter(
+          (name: string | null): name is string => name != null,
+        );
+
+        const options = metricNames.map((name) => {
+          const column = columns.find((col) => col.name === name);
+          return {
+            value: name,
+            label: column?.display_name ?? name,
+          };
+        });
+
+        return { options };
+      },
+      readDependencies: ["graph.metrics"],
+      default: [],
+    },
   } as VisualizationSettingsDefinitions,
 };

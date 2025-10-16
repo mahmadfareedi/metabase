@@ -2,6 +2,11 @@ import type { RenderingContext } from "metabase/visualizations/types";
 
 import type { RadarChartModel, RadarSeriesModel } from "./model/types";
 
+interface RadarOptionConfig {
+  showMarkers: boolean;
+  markerSeriesKeys: string[];
+}
+
 interface RadarSeriesDataItem {
   name: string;
   value: number[];
@@ -10,9 +15,14 @@ interface RadarSeriesDataItem {
   itemStyle: {
     color: string;
   };
+  symbol?: string;
+  symbolSize?: number;
 }
 
-const getSeriesData = (series: RadarSeriesModel): RadarSeriesDataItem => {
+const getSeriesData = (
+  series: RadarSeriesModel,
+  showMarkers: boolean,
+): RadarSeriesDataItem => {
   return {
     name: series.name,
     value: series.values.map((value) => (value == null ? Number.NaN : value)),
@@ -21,6 +31,8 @@ const getSeriesData = (series: RadarSeriesModel): RadarSeriesDataItem => {
     itemStyle: {
       color: series.color,
     },
+    symbol: showMarkers ? "circle" : "none",
+    symbolSize: showMarkers ? 5 : undefined,
   };
 };
 
@@ -28,10 +40,12 @@ export const getRadarChartOption = (
   chartModel: RadarChartModel,
   visibleSeries: RadarSeriesModel[],
   renderingContext: RenderingContext,
+  { showMarkers, markerSeriesKeys }: RadarOptionConfig,
 ) => {
   const fontSize = renderingContext.theme.cartesian.label.fontSize;
   const splitLineColor =
     renderingContext.theme.cartesian.splitLine.lineStyle.color;
+  const markerKeys = new Set(markerSeriesKeys);
 
   return {
     color: visibleSeries.map((series) => series.color),
@@ -46,7 +60,7 @@ export const getRadarChartOption = (
       radius: "70%",
       startAngle: 90,
       axisName: {
-        color: splitLineColor,
+        color: renderingContext.getColor("text-primary"),
         fontFamily: renderingContext.fontFamily,
         fontSize,
       },
@@ -77,8 +91,8 @@ export const getRadarChartOption = (
         emphasis: {
           focus: "series",
         },
-        symbol: "circle",
-        symbolSize: 4,
+        symbol: showMarkers ? "circle" : "none",
+        symbolSize: showMarkers ? 5 : 0,
         lineStyle: {
           width: 2,
         },
@@ -86,7 +100,13 @@ export const getRadarChartOption = (
           opacity: 0.12,
         },
         animationDuration: 300,
-        data: visibleSeries.map(getSeriesData),
+        data: visibleSeries.map((series) =>
+          getSeriesData(
+            series,
+            showMarkers &&
+              (markerSeriesKeys.length === 0 || markerKeys.has(series.key)),
+          ),
+        ),
       },
     ],
   };

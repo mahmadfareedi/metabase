@@ -60,6 +60,17 @@ export function RadarChart(props: VisualizationProps) {
     [chartModel, settings],
   );
 
+  const showDataPoints = settings["radar.show_data_points"] === true;
+  const markerSeriesKeys = useMemo(() => {
+    const configuredSeries = Array.isArray(settings["radar.data_points_series"])
+      ? (settings["radar.data_points_series"] as (string | null)[])
+      : [];
+
+    return configuredSeries.filter(
+      (value): value is string => value != null && value !== "",
+    );
+  }, [settings]);
+
   const visibleSeries = useMemo(
     () => chartModel.series.filter((series) => !hiddenSeries.has(series.key)),
     [chartModel.series, hiddenSeries],
@@ -67,10 +78,20 @@ export function RadarChart(props: VisualizationProps) {
 
   const option = useMemo(
     () => ({
-      ...getRadarChartOption(chartModel, visibleSeries, renderingContext),
+      ...getRadarChartOption(chartModel, visibleSeries, renderingContext, {
+        showMarkers: showDataPoints,
+        markerSeriesKeys: showDataPoints ? markerSeriesKeys : [],
+      }),
       tooltip: getTooltipOption(containerRef, chartModel, formatters),
     }),
-    [chartModel, visibleSeries, renderingContext, formatters],
+    [
+      chartModel,
+      visibleSeries,
+      renderingContext,
+      formatters,
+      showDataPoints,
+      markerSeriesKeys,
+    ],
   );
 
   const legendTitles = chartModel.series.map((series) => [series.name]);

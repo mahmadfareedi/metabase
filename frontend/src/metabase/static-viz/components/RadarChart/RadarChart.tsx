@@ -1,5 +1,6 @@
 import { init } from "echarts/core";
 
+import { color } from "metabase/lib/colors";
 import type { StaticChartProps } from "metabase/static-viz/components/StaticVisualization";
 import { sanitizeSvgForBatik } from "metabase/static-viz/lib/svg";
 import { registerEChartsModules } from "metabase/visualizations/echarts";
@@ -30,10 +31,20 @@ export const RadarChart = ({
   });
 
   const chartModel = getRadarChartModel(rawSeries, settings);
+  const showDataPoints = settings["radar.show_data_points"] === true;
+  const markerSeriesKeys = Array.isArray(settings["radar.data_points_series"])
+    ? (settings["radar.data_points_series"] as (string | null)[]).filter(
+        (value): value is string => value != null && value !== "",
+      )
+    : [];
   const option = getRadarChartOption(
     chartModel,
     chartModel.series,
     renderingContext,
+    {
+      showMarkers: showDataPoints,
+      markerSeriesKeys: showDataPoints ? markerSeriesKeys : [],
+    },
   );
 
   if (settings["radar.show_legend"] !== false && chartModel.series.length > 0) {
@@ -41,6 +52,7 @@ export const RadarChart = ({
       show: true,
       bottom: 0,
       textStyle: {
+        color: color("text-dark"),
         fontFamily: renderingContext.fontFamily,
       },
     };
