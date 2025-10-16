@@ -150,6 +150,10 @@ If you have a bar chart like Count of Users by Age, where the x-axis is a number
 
 ![Left-aligned sankey chart](../images/sankey-left-aligned.png)
 
+## Radar charts
+
+[Radar charts](./radar-chart.md) compare multiple metrics across a shared set of categories. Each metric is drawn as a polygon, making it easy to see strengths and weaknesses side by side. Radar charts work best with a small number of categories and when the metrics use similar units.
+
 ## Waterfall charts
 
 [Waterfall charts](./waterfall-chart.md) are a kind of bar chart useful for visualizing results that contain both positive and negative values.

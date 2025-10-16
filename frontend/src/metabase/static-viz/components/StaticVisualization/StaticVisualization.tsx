@@ -7,6 +7,7 @@ import { ComboChart } from "../ComboChart";
 import { FunnelBarChart } from "../FunnelBarChart";
 import { PieChart } from "../PieChart/PieChart";
 import { ProgressBar } from "../ProgressBar";
+import { RadarChart } from "../RadarChart/RadarChart";
 import { StaticRowChart } from "../RowChart/RowChart";
 import { SankeyChart } from "../SankeyChart";
 import { ScalarChart } from "../ScalarChart";
@@ -41,6 +42,8 @@ export const StaticVisualization = ({
       return <ComboChart {...props} />;
     case "scatter":
       return <ScatterPlot {...props} />;
+    case "radar":
+      return <RadarChart {...props} />;
     case "waterfall":
       return <WaterfallChart {...props} />;
     case "funnel":

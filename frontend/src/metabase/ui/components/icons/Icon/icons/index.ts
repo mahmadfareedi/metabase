@@ -330,6 +330,8 @@ import question_component from "./question.svg?component";
 import question_source from "./question.svg?source";
 import quote_component from "./quote.svg?component";
 import quote_source from "./quote.svg?source";
+import radar_component from "./radar.svg?component";
+import radar_source from "./radar.svg?source";
 import receipt_component from "./receipt.svg?component";
 import receipt_source from "./receipt.svg?source";
 import recents_component from "./recents.svg?component";
@@ -1107,6 +1109,10 @@ export const Icons: Record<IconName, { component: React.VFC; source: string }> =
       component: progress_component,
       source: progress_source,
     },
+    radar: {
+      component: radar_component,
+      source: radar_source,
+    },
     embed_interactive: {
       component: embed_interactive_component,
       source: embed_interactive_source,
@@ -1624,6 +1630,7 @@ export type IconName =
   | "popover"
   | "popular"
   | "progress"
+  | "radar"
   | "pulse"
   | "receipt"
   | "recents"

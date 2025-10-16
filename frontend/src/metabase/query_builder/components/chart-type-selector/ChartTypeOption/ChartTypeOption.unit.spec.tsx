@@ -43,6 +43,7 @@ const EXPECTED_VISUALIZATION_VALUES: Array<{
   { visualizationType: "combo", displayName: "Combo", iconName: "lineandbar" },
   { visualizationType: "row", displayName: "Row", iconName: "horizontal_bar" },
   { visualizationType: "scatter", displayName: "Scatter", iconName: "bubble" },
+  { visualizationType: "radar", displayName: "Radar", iconName: "radar" },
   { visualizationType: "pie", displayName: "Pie", iconName: "pie" },
   { visualizationType: "map", displayName: "Map", iconName: "pinmap" },
   { visualizationType: "funnel", displayName: "Funnel", iconName: "funnel" },

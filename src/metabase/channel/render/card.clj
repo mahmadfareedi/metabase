@@ -123,6 +123,7 @@
            :pie
            :scatter
            :waterfall
+           :radar
            :row
            :line
            :area
