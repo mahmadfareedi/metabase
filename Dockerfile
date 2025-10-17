@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.6
 ###################
 # STAGE 1: builder
 ###################
