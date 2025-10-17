@@ -9,19 +9,31 @@ ARG VERSION
 
 WORKDIR /home/node
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl gnupg ca-certificates git wget \
-    && curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public \
-        | gpg --dearmor -o /usr/share/keyrings/adoptium.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print $2}' /etc/os-release) main" \
-        | tee /etc/apt/sources.list.d/adoptium.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends temurin-21-jdk \
-    && curl -fsSL https://download.clojure.org/install/linux-install-1.12.0.1488.sh -o /tmp/install-clj.sh \
-    && chmod +x /tmp/install-clj.sh \
-    && /tmp/install-clj.sh \
-    && rm -f /tmp/install-clj.sh \
-    && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends curl ca-certificates git wget tar gzip; \
+    ARCH="$(dpkg --print-architecture)"; \
+    case "${ARCH}" in \
+      amd64) JDK_ARCH="x64" ;; \
+      arm64) JDK_ARCH="aarch64" ;; \
+      *) echo "Unsupported architecture: ${ARCH}" >&2; exit 1 ;; \
+    esac; \
+    JDK_VERSION="21.0.4_7"; \
+    JDK_RELEASE="jdk-21.0.4%2B7"; \
+    JDK_URL="https://github.com/adoptium/temurin21-binaries/releases/download/${JDK_RELEASE}/OpenJDK21U-jdk_${JDK_ARCH}_linux_hotspot_${JDK_VERSION}.tar.gz"; \
+    curl -fsSL "${JDK_URL}" -o /tmp/jdk.tar.gz; \
+    mkdir -p /usr/lib/jvm; \
+    tar -xzf /tmp/jdk.tar.gz -C /usr/lib/jvm; \
+    rm -f /tmp/jdk.tar.gz; \
+    JDK_DIR="$(find /usr/lib/jvm -maxdepth 1 -type d -name 'jdk-*' | head -n 1)"; \
+    ln -s "${JDK_DIR}" /usr/lib/jvm/temurin-21; \
+    update-alternatives --install /usr/bin/java java /usr/lib/jvm/temurin-21/bin/java 1; \
+    update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/temurin-21/bin/javac 1; \
+    curl -fsSL https://download.clojure.org/install/linux-install-1.12.0.1488.sh -o /tmp/install-clj.sh; \
+    chmod +x /tmp/install-clj.sh; \
+    /tmp/install-clj.sh; \
+    rm -f /tmp/install-clj.sh; \
+    rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
