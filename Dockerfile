@@ -49,7 +49,11 @@ RUN yarn config set network-timeout 600000 \
 # install frontend dependencies
 RUN yarn install --frozen-lockfile
 
-RUN INTERACTIVE=false CI=true MB_EDITION=$MB_EDITION bin/build.sh :version ${VERSION}
+# build only the necessary steps inside Docker and skip heavy optional ones
+ENV SKIP_LICENSES=true
+ENV SKIP_TRANSLATIONS=true
+RUN INTERACTIVE=false CI=true MB_EDITION=$MB_EDITION \
+    bin/build.sh '{:version "'"${VERSION}"'", :steps [:version :frontend :drivers :uberjar]}'
 
 # ###################
 # # STAGE 2: runner
