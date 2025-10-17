@@ -49,6 +49,9 @@ RUN yarn config set network-timeout 600000 \
 # install frontend dependencies
 RUN yarn install --frozen-lockfile
 
+# prefetch clojure/tooling dependencies to reduce timeouts during build
+RUN clojure -Srepro -Sthreads 8 -P -A:drivers:build:build/all || true
+
 # build only the necessary steps inside Docker and skip heavy optional ones
 ENV SKIP_LICENSES=true
 ENV SKIP_TRANSLATIONS=true
