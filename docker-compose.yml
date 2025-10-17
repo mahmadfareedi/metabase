@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      network: host
       args:
         NODE_VERSION: "22.11.0"
         YARN_VERSION: "1.22.19"
