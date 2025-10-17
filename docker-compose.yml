@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  metabase:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_VERSION: "22.11.0"
+        YARN_VERSION: "1.22.19"
+        MB_EDITION: "oss"
+        VERSION: "v0.0.1-radar"
+    image: metabase-radar
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_FILE: /metabase.db
+    volumes:
+      - ./metabase.db:/metabase.db
+    restart: unless-stopped
