@@ -9,14 +9,19 @@ ARG VERSION
 
 WORKDIR /home/node
 
-RUN apt-get update && apt-get upgrade -y && apt-get install wget apt-transport-https gpg curl git -y \
-    && wget -qO - https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor | tee /etc/apt/trusted.gpg.d/adoptium.gpg > /dev/null \
-    && echo "deb https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" | tee /etc/apt/sources.list.d/adoptium.list \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl gnupg ca-certificates git wget \
+    && curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public \
+        | gpg --dearmor -o /usr/share/keyrings/adoptium.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print $2}' /etc/os-release) main" \
+        | tee /etc/apt/sources.list.d/adoptium.list \
     && apt-get update \
-    && apt install temurin-21-jdk -y \
-    && curl -O https://download.clojure.org/install/linux-install-1.12.0.1488.sh \
-    && chmod +x linux-install-1.12.0.1488.sh \
-    && ./linux-install-1.12.0.1488.sh
+    && apt-get install -y --no-install-recommends temurin-21-jdk \
+    && curl -fsSL https://download.clojure.org/install/linux-install-1.12.0.1488.sh -o /tmp/install-clj.sh \
+    && chmod +x /tmp/install-clj.sh \
+    && /tmp/install-clj.sh \
+    && rm -f /tmp/install-clj.sh \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
