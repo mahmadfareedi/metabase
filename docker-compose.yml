@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   metabase:
     build:
@@ -11,6 +9,10 @@ services:
         YARN_VERSION: "1.22.19"
         MB_EDITION: "oss"
         VERSION: "v0.0.1-radar"
+        # Optional: pass proxies to the builder if your network requires them
+        HTTP_PROXY: ${HTTP_PROXY}
+        HTTPS_PROXY: ${HTTPS_PROXY}
+        NO_PROXY: ${NO_PROXY}
     image: metabase-radar
     ports:
       - "3000:3000"

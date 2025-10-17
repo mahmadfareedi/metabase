@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.6
 ###################
 # STAGE 1: builder
 ###################
@@ -6,8 +7,14 @@ FROM node:22-bullseye AS builder
 
 ARG MB_EDITION=oss
 ARG VERSION
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
 
 WORKDIR /home/node
+ENV HTTP_PROXY=${HTTP_PROXY}
+ENV HTTPS_PROXY=${HTTPS_PROXY}
+ENV NO_PROXY=${NO_PROXY}
 
 RUN set -eux; \
     apt-get update; \
@@ -41,15 +48,30 @@ COPY . .
 RUN git config --global --add safe.directory /home/node
 
 # configure package managers to better tolerate network hiccups
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN yarn config set network-timeout 600000 \
     && npm config set fetch-retries 5 \
     && npm config set fetch-retry-mintimeout 20000 \
-    && npm config set fetch-retry-maxtimeout 120000
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && yarn config set registry https://registry.npmjs.org/
 
 # install frontend dependencies
-RUN yarn install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.cache/yarn \
+    --mount=type=cache,target=/root/.npm \
+    yarn install --frozen-lockfile
 
-RUN INTERACTIVE=false CI=true MB_EDITION=$MB_EDITION bin/build.sh :version ${VERSION}
+# prefetch clojure/tooling dependencies to reduce timeouts during build
+RUN --mount=type=cache,target=/root/.m2 \
+    clojure -Srepro -Sthreads 8 -P -A:cljs:drivers:build:build/all || true
+
+# build only the necessary steps inside Docker and skip heavy optional ones
+ENV SKIP_LICENSES=true
+ENV SKIP_TRANSLATIONS=true
+RUN --mount=type=cache,target=/root/.m2 \
+    --mount=type=cache,target=/root/.cache/yarn \
+    --mount=type=cache,target=/root/.npm \
+    INTERACTIVE=false CI=true MB_EDITION=$MB_EDITION \
+    bin/build.sh '{:version "'"${VERSION}"'", :steps [:version :frontend :drivers :uberjar]}'
 
 # ###################
 # # STAGE 2: runner
