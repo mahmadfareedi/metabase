@@ -56,59 +56,16 @@ export const getTooltipOption = (
   containerRef: React.RefObject<HTMLDivElement>,
   chartModel: RadarChartModel,
   formatters: RadarChartFormatters,
-  visibleSeriesKeys?: string[],
+  _visibleSeriesKeys?: string[],
 ): TooltipOption => {
   return {
     ...getTooltipBaseOption(containerRef),
-    // Use axis trigger so we can compare values across series for the hovered axis label
-    trigger: "axis",
+    // Use item trigger (radar supports series item hover); show all dimension
+    // values for the hovered series so users always see numeric values.
+    trigger: "item",
     formatter: (params) => {
-      // Axis trigger returns an array of params (one per visible series)
-      if (Array.isArray(params) && params.length > 0) {
-        const first = params[0] as any;
-        // Best-effort extraction of the hovered axis label (dimension name)
-        const axisLabel: string | undefined =
-          first?.axisValueLabel || first?.axisValue || undefined;
-
-        const dimensionIndex =
-          typeof axisLabel === "string"
-            ? chartModel.dimensions.findIndex((d) => d?.name === axisLabel)
-            : -1;
-
-        const idx = dimensionIndex >= 0 ? dimensionIndex : 0;
-
-        const allowed = new Set(
-          (visibleSeriesKeys ?? chartModel.series.map((s) => s.key)).map((k) =>
-            k.toString(),
-          ),
-        );
-
-        const rows = chartModel.series
-          .filter((s) => allowed.has(s.key))
-          .map((s) => {
-            const v = s.values[idx] ?? null;
-            return {
-              key: `${s.key}-${idx}`,
-              markerColorClass: getMarkerColorClass(s.color),
-              name: s.name,
-              values: [
-                formatters.formatMetric(
-                  typeof v === "number" ? v : null,
-                  s.key,
-                ),
-              ],
-              isFocused: false,
-            } as const;
-          });
-
-        const header =
-          typeof axisLabel === "string"
-            ? axisLabel
-            : (chartModel.dimensions[idx]?.name ?? "");
-
-        return reactNodeToHtmlString(
-          <EChartsTooltip header={header} rows={rows} />,
-        );
+      if (Array.isArray(params)) {
+        return "";
       }
 
       const data = params.data as {
@@ -127,42 +84,30 @@ export const getTooltipOption = (
         return "";
       }
 
-      // Determine which indicator/dimension point is hovered
-      const indicatorIndex =
-        typeof (params as any)?.indicatorIndex === "number"
-          ? (params as any).indicatorIndex
-          : typeof (params as any)?.dimensionIndex === "number"
-            ? (params as any).dimensionIndex
-            : typeof (params as any)?.dataIndex === "number"
-              ? (params as any).dataIndex
-              : 0;
+      // Prefer values from params; fall back to our model values
+      const p: any = params;
+      const valuesArr: (number | null)[] = Array.isArray(p.value)
+        ? (p.value as (number | null)[])
+        : Array.isArray(data?.rawValues)
+          ? (data.rawValues as (number | null)[])
+          : series.values;
 
-      const dim = chartModel.dimensions[indicatorIndex];
-
-      // Build a comparison tooltip across series for the hovered dimension.
-      const allowed = new Set(
-        (visibleSeriesKeys ?? chartModel.series.map((s) => s.key)).map((k) =>
-          k.toString(),
-        ),
-      );
-
-      const rows = chartModel.series
-        .filter((s) => allowed.has(s.key))
-        .map((s) => {
-          const v = s.values[indicatorIndex] ?? null;
-          return {
-            key: `${s.key}-${indicatorIndex}`,
-            markerColorClass: getMarkerColorClass(s.color),
-            name: s.name,
-            values: [
-              formatters.formatMetric(typeof v === "number" ? v : null, s.key),
-            ],
-            isFocused: s.key === series.key,
-          };
-        });
+      const markerColorClass = getMarkerColorClass(series.color);
+      const rows = chartModel.dimensions.map((dim, i) => ({
+        key: `${series.key}-${i}`,
+        markerColorClass: i === 0 ? markerColorClass : undefined,
+        name: dim?.name ?? "",
+        values: [
+          formatters.formatMetric(
+            typeof valuesArr[i] === "number" ? (valuesArr[i] as number) : null,
+            series.key,
+          ),
+        ],
+        isSecondary: i !== 0,
+      }));
 
       return reactNodeToHtmlString(
-        <EChartsTooltip header={dim?.name ?? ""} rows={rows} />,
+        <EChartsTooltip header={series.name} rows={rows} />,
       );
     },
   };
