@@ -8,6 +8,7 @@ interface RadarOptionConfig {
   showLabels: boolean;
   markerSeriesKeys: string[];
   formatters: RadarChartFormatters;
+  showLegend?: boolean;
 }
 
 interface RadarSeriesDataItem {
@@ -109,7 +110,13 @@ export const getRadarChartOption = (
   chartModel: RadarChartModel,
   visibleSeries: RadarSeriesModel[],
   renderingContext: RenderingContext,
-  { showMarkers, showLabels, markerSeriesKeys, formatters }: RadarOptionConfig,
+  {
+    showMarkers,
+    showLabels,
+    markerSeriesKeys,
+    formatters,
+    showLegend,
+  }: RadarOptionConfig,
 ) => {
   const fontSize = renderingContext.theme.cartesian.label.fontSize;
   const splitLineColor =
@@ -122,6 +129,8 @@ export const getRadarChartOption = (
       .filter((key): key is string => key != null),
   );
 
+  const computedRadius = showLegend ? "60%" : "70%";
+
   return {
     color: visibleSeries.map((series) => series.color),
     legend: {
@@ -132,7 +141,7 @@ export const getRadarChartOption = (
         ...indicator,
         name: chartModel.dimensions[index]?.name ?? "",
       })),
-      radius: "70%",
+      radius: computedRadius,
       startAngle: 90,
       axisName: {
         color: renderingContext.getColor("text-primary"),
