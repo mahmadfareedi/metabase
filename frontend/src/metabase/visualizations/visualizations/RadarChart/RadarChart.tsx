@@ -97,7 +97,12 @@ export function RadarChart(props: VisualizationProps) {
         markerSeriesKeys: showDataPoints ? markerSeriesKeys : [],
         formatters,
       }),
-      tooltip: getTooltipOption(containerRef, chartModel, formatters),
+      tooltip: getTooltipOption(
+        containerRef,
+        chartModel,
+        formatters,
+        visibleSeries.map((s) => s.key),
+      ),
     }),
     [
       chartModel,

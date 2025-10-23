@@ -17,7 +17,7 @@ interface RadarTooltipProps {
   formatters: RadarChartFormatters;
 }
 
-const RadarTooltip = ({
+const _RadarTooltip = ({
   series,
   chartModel,
   rawValues,
@@ -56,6 +56,7 @@ export const getTooltipOption = (
   containerRef: React.RefObject<HTMLDivElement>,
   chartModel: RadarChartModel,
   formatters: RadarChartFormatters,
+  visibleSeriesKeys?: string[],
 ): TooltipOption => {
   return {
     ...getTooltipBaseOption(containerRef),
@@ -81,13 +82,42 @@ export const getTooltipOption = (
         return "";
       }
 
+      // Determine which indicator/dimension point is hovered
+      const indicatorIndex =
+        typeof (params as any)?.indicatorIndex === "number"
+          ? (params as any).indicatorIndex
+          : typeof (params as any)?.dimensionIndex === "number"
+            ? (params as any).dimensionIndex
+            : typeof (params as any)?.dataIndex === "number"
+              ? (params as any).dataIndex
+              : 0;
+
+      const dim = chartModel.dimensions[indicatorIndex];
+
+      // Build a comparison tooltip across series for the hovered dimension.
+      const allowed = new Set(
+        (visibleSeriesKeys ?? chartModel.series.map((s) => s.key)).map((k) =>
+          k.toString(),
+        ),
+      );
+
+      const rows = chartModel.series
+        .filter((s) => allowed.has(s.key))
+        .map((s) => {
+          const v = s.values[indicatorIndex] ?? null;
+          return {
+            key: `${s.key}-${indicatorIndex}`,
+            markerColorClass: getMarkerColorClass(s.color),
+            name: s.name,
+            values: [
+              formatters.formatMetric(typeof v === "number" ? v : null, s.key),
+            ],
+            isFocused: s.key === series.key,
+          };
+        });
+
       return reactNodeToHtmlString(
-        <RadarTooltip
-          series={series}
-          chartModel={chartModel}
-          rawValues={data.rawValues ?? []}
-          formatters={formatters}
-        />,
+        <EChartsTooltip header={dim?.name ?? ""} rows={rows} />,
       );
     },
   };
