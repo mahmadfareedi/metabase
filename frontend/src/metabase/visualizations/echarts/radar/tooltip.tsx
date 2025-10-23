@@ -60,10 +60,55 @@ export const getTooltipOption = (
 ): TooltipOption => {
   return {
     ...getTooltipBaseOption(containerRef),
-    trigger: "item",
+    // Use axis trigger so we can compare values across series for the hovered axis label
+    trigger: "axis",
     formatter: (params) => {
-      if (Array.isArray(params)) {
-        return "";
+      // Axis trigger returns an array of params (one per visible series)
+      if (Array.isArray(params) && params.length > 0) {
+        const first = params[0] as any;
+        // Best-effort extraction of the hovered axis label (dimension name)
+        const axisLabel: string | undefined =
+          first?.axisValueLabel || first?.axisValue || undefined;
+
+        const dimensionIndex =
+          typeof axisLabel === "string"
+            ? chartModel.dimensions.findIndex((d) => d?.name === axisLabel)
+            : -1;
+
+        const idx = dimensionIndex >= 0 ? dimensionIndex : 0;
+
+        const allowed = new Set(
+          (visibleSeriesKeys ?? chartModel.series.map((s) => s.key)).map((k) =>
+            k.toString(),
+          ),
+        );
+
+        const rows = chartModel.series
+          .filter((s) => allowed.has(s.key))
+          .map((s) => {
+            const v = s.values[idx] ?? null;
+            return {
+              key: `${s.key}-${idx}`,
+              markerColorClass: getMarkerColorClass(s.color),
+              name: s.name,
+              values: [
+                formatters.formatMetric(
+                  typeof v === "number" ? v : null,
+                  s.key,
+                ),
+              ],
+              isFocused: false,
+            } as const;
+          });
+
+        const header =
+          typeof axisLabel === "string"
+            ? axisLabel
+            : (chartModel.dimensions[idx]?.name ?? "");
+
+        return reactNodeToHtmlString(
+          <EChartsTooltip header={header} rows={rows} />,
+        );
       }
 
       const data = params.data as {
