@@ -18,7 +18,10 @@ export interface RadarSeriesModel {
   key: string;
   name: string;
   color: string;
+  // Transformed values used for drawing (may be log-scaled).
   values: (number | null)[];
+  // Raw numeric values (unscaled). Used for labels/tooltips.
+  rawValues: (number | null)[];
   metricColumn: RemappingHydratedDatasetColumn;
 }
 

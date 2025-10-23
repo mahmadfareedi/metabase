@@ -1,0 +1,16 @@
+services:
+  metabase:
+    # Replace this image tag with the one you publish for your client
+    image: metabase-radar:radar-v1
+    container_name: metabase-radar
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_FILE: /metabase.db
+    volumes:
+      - metabase-data:/metabase.db
+    restart: unless-stopped
+
+volumes:
+  metabase-data:
+

@@ -63,6 +63,8 @@ export const RadarChart = ({
       showLabels: showDataPoints,
       markerSeriesKeys: showDataPoints ? markerSeriesKeys : [],
       formatters,
+      showLegend: settings["radar.show_legend"] !== false,
+      containerSize: { width, height },
     },
   );
 
