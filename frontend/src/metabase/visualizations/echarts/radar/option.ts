@@ -138,6 +138,15 @@ export const getRadarChartOption = (
         color: renderingContext.getColor("text-primary"),
         fontFamily: renderingContext.fontFamily,
         fontSize,
+        // Wrap long labels instead of letting them overflow/crop
+        formatter: (value: string) => `{n|${value}}`,
+        rich: {
+          n: {
+            width: 160, // wrap width in pixels; adjust if needed
+            overflow: "break",
+            lineHeight: Math.round(fontSize * 1.2),
+          },
+        },
       },
       axisLine: {
         lineStyle: {
