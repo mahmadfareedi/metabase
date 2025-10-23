@@ -44,8 +44,8 @@
    [metabase.util.i18n :as i18n]
    [metabase.util.log :as log]
    [metabase.util.malli :as mu]
-   [metabase.util.performance :as perf :refer [mapv every? some select-keys]]
-   [metabase.util.time :as u.time]))
+  [metabase.util.performance :as perf :refer [mapv every? some select-keys]]
+  [metabase.util.time :as u.time]))
 
 (defn- mbql-clause?
   "True if `x` is an MBQL clause (a sequence with a token as its first arg). (This is different from the implementation
@@ -992,6 +992,24 @@
   [field]
   (mbql.u/update-field-options field dissoc :temporal-unit :original-temporal-unit))
 
+;; Guards used in core.match patterns must be total functions. Some Malli-based
+;; validators can throw when given unexpected shapes. Wrap them so failures are
+;; treated as non-matches instead of exceptions that abort traversal.
+(defn- safe-valid?
+  [pred x]
+  (try
+    (pred x)
+    (catch #?(:clj Throwable :cljs :default) _
+      false)))
+
+(defn- safe-filter?
+  [x]
+  (safe-valid? mbql.preds/Filter? x))
+
+(defn- safe-field?
+  [x]
+  (safe-valid? mbql.preds/Field? x))
+
 (mu/defn ^:private replace-relative-date-filters :- mbql.s/Filter
   "Replaces broken relative date filter clauses with `:relative-time-interval` calls.
 
@@ -1030,12 +1048,12 @@
   [filter-clause :- mbql.s/Filter]
   (lib.util.match/replace filter-clause
     [:!=
-     (field :guard (every-pred mbql.preds/Field? (temporal-unit-is? #{:hour-of-day})))
+     (field :guard (every-pred safe-field? (temporal-unit-is? #{:hour-of-day})))
      & (args :guard #(every? number? %))]
     (into [:!= [:get-hour (remove-temporal-unit field)]] args)
 
     [:!=
-     (field :guard (every-pred mbql.preds/Field? (temporal-unit-is? #{:day-of-week :month-of-year :quarter-of-year})))
+     (field :guard (every-pred safe-field? (temporal-unit-is? #{:day-of-week :month-of-year :quarter-of-year})))
      & (args :guard #(every? u.time/timestamp-coercible? %))]
     (let [args (mapv u.time/coerce-to-timestamp args)]
       (if (every? u.time/valid? args)
@@ -1055,15 +1073,14 @@
   "Replaces legacy filter clauses with modern alternatives."
   [query]
   (lib.util.match/replace query
-    (filter-clause :guard mbql.preds/Filter?)
+    (filter-clause :guard safe-filter?)
     (try
       (-> filter-clause
           replace-relative-date-filters
           replace-exclude-date-filters)
       (catch #?(:clj Throwable :cljs :default) e
-        (throw (ex-info (i18n/tru "Error replacing legacy filters")
-                        {:filter-clause filter-clause, :query query}
-                        e))))))
+        (log/warn e (i18n/tru "Error replacing legacy filters") {:filter-clause filter-clause})
+        &match))))
 
 ;;; +----------------------------------------------------------------------------------------------------------------+
 ;;; |                                             REMOVING EMPTY CLAUSES                                             |

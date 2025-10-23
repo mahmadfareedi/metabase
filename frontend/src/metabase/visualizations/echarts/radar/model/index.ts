@@ -17,14 +17,28 @@ import type { RadarChartModel, RadarIndicator } from "./types";
 
 const MAX_DIMENSIONS = 50;
 
+
 const toNumber = (value: unknown): number | null => {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : null;
   }
 
   if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
+    // Be tolerant of formatted numbers like "11,921.46", "12 345", "$1,234.56"
+    // Strip spaces and common grouping separators; keep minus and decimal point.
+    const cleaned = value
+      .trim()
+      .replace(/[\s,\u00A0]/g, "") // spaces, non‑breaking spaces, commas
+      .replace(/[\$€£₹]/g, ""); // currency symbols (basic set)
+
+    const parsed = Number(cleaned);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+
+    // Fallback: keep digits, minus, and dot only.
+    const fallback = Number(value.replace(/[^0-9.\-]/g, ""));
+    return Number.isFinite(fallback) ? fallback : null;
   }
 
   return null;
@@ -68,20 +82,19 @@ const getAxisIndicators = (
   valuesBySeries: (number | null)[][],
   dimensionNames: string[],
 ): RadarIndicator[] => {
-  return dimensionNames.map((_, index) => {
-    const values = valuesBySeries
-      .map((seriesValues) => seriesValues[index])
-      .filter(isNotNull);
-
-    if (values.length === 0) {
-      return { min: 0, max: 1 };
-    }
-
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-
-    return extendRange(min, max);
-  });
+  // Use a single global min/max across all dimensions so a single-series radar
+  // does not normalize each axis to its own maximum (which produces a circle).
+  const all: number[] = [];
+  for (const series of valuesBySeries) {
+    for (const v of series) if (typeof v === "number" && Number.isFinite(v)) all.push(v);
+  }
+  if (all.length === 0) {
+    return dimensionNames.map(() => ({ min: 0, max: 1 }));
+  }
+  const min = Math.min(...all);
+  const max = Math.max(...all);
+  const er = extendRange(min, max);
+  return dimensionNames.map(() => er);
 };
 
 export const getRadarChartModel = (
@@ -126,10 +139,13 @@ export const getRadarChartModel = (
     rawRows: datum.rawRows,
   }));
 
-  const seriesModels = series.map((seriesModel) => {
-    const values = trimmedDataset.map((datum) =>
-      toNumber(seriesModel.xAccessor(datum)),
-    );
+  const rawSeriesValues: (number | null)[][] = series.map((seriesModel) =>
+    trimmedDataset.map((datum) => toNumber(seriesModel.xAccessor(datum))),
+  );
+
+  const seriesModels = series.map((seriesModel, seriesIdx) => {
+    const rawValues = rawSeriesValues[seriesIdx];
+    const values = rawValues; // no transform; use standard scaling
 
     const metricColumn = seriesModel.seriesInfo?.metricColumn;
 
@@ -142,13 +158,14 @@ export const getRadarChartModel = (
       name: seriesModel.seriesName,
       color: seriesColors[seriesModel.seriesKey],
       values,
+      rawValues,
       metricColumn,
     };
   });
 
   const indicators = getAxisIndicators(
-    seriesModels.map((seriesModel) => seriesModel.values),
-    dimensions.map((dimension) => dimension.name),
+    seriesModels.map((s) => s.values),
+    dimensions.map((d) => d.name),
   );
 
   return {

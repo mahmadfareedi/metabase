@@ -8,6 +8,10 @@ interface RadarOptionConfig {
   showLabels: boolean;
   markerSeriesKeys: string[];
   formatters: RadarChartFormatters;
+  showLegend?: boolean;
+  // Optional container size; if provided we compute a pixel radius
+  // to avoid clipping long axis labels inside the chart bounds.
+  containerSize?: { width: number; height: number };
 }
 
 interface RadarSeriesDataItem {
@@ -30,19 +34,21 @@ interface RadarSeriesDataItem {
   };
 }
 
-const getSeriesData = (
-  series: RadarSeriesModel,
-  showMarkers: boolean,
-  showLabels: boolean,
-  renderingContext: RenderingContext,
-  formatters: RadarChartFormatters,
+  const getSeriesData = (
+    series: RadarSeriesModel,
+    showMarkers: boolean,
+    showLabels: boolean,
+    renderingContext: RenderingContext,
+    formatters: RadarChartFormatters,
 ): RadarSeriesDataItem => {
   const shouldShowMarker = showMarkers;
   const shouldShowLabel = shouldShowMarker && showLabels;
   return {
     name: series.name,
-    value: series.values.map((value) => (value == null ? Number.NaN : value)),
-    rawValues: series.values,
+    // Provide nulls for missing values so ECharts can scale points correctly
+    // instead of receiving NaN (which may collapse points).
+    value: series.values.map((value) => (value == null ? null : value)),
+    rawValues: series.rawValues,
     seriesKey: series.key,
     itemStyle: {
       color: series.color,
@@ -61,44 +67,18 @@ const getSeriesData = (
           formatter: (params: any) => {
             const data = params?.data as RadarSeriesDataItem | undefined;
             const seriesKey = data?.seriesKey ?? series.key;
-
-            const valueFromParams = (() => {
-              if (typeof params?.value === "number") {
-                return params.value as number | null;
-              }
-              if (Array.isArray(params?.value)) {
-                const indicatorIndex =
-                  typeof params?.indicatorIndex === "number"
-                    ? params.indicatorIndex
-                    : typeof params?.dimensionIndex === "number"
-                      ? params.dimensionIndex
-                      : typeof params?.dataIndex === "number"
-                        ? params.dataIndex
-                        : 0;
-                const raw = params.value[indicatorIndex];
-                return typeof raw === "number" ? raw : null;
-              }
-              return null;
-            })();
-
-            if (valueFromParams != null) {
-              return formatters.formatMetric(valueFromParams, seriesKey);
-            }
-
-            if (Array.isArray(data?.rawValues)) {
-              const indicatorIndex =
-                typeof params?.indicatorIndex === "number"
-                  ? params.indicatorIndex
-                  : typeof params?.dimensionIndex === "number"
-                    ? params.dimensionIndex
-                    : typeof params?.dataIndex === "number"
-                      ? params.dataIndex
-                      : 0;
-              const rawValue = data.rawValues[indicatorIndex];
-              return formatters.formatMetric(rawValue, seriesKey);
-            }
-
-            return formatters.formatMetric(null, seriesKey);
+            const indicatorIndex =
+              typeof params?.indicatorIndex === "number"
+                ? params.indicatorIndex
+                : typeof params?.dimensionIndex === "number"
+                  ? params.dimensionIndex
+                  : typeof params?.dataIndex === "number"
+                    ? params.dataIndex
+                    : 0;
+            const rawValue = Array.isArray(data?.rawValues)
+              ? data.rawValues[indicatorIndex]
+              : null;
+            return formatters.formatMetric(rawValue, seriesKey);
           },
         }
       : undefined,
@@ -109,7 +89,14 @@ export const getRadarChartOption = (
   chartModel: RadarChartModel,
   visibleSeries: RadarSeriesModel[],
   renderingContext: RenderingContext,
-  { showMarkers, showLabels, markerSeriesKeys, formatters }: RadarOptionConfig,
+  {
+    showMarkers,
+    showLabels,
+    markerSeriesKeys,
+    formatters,
+    showLegend,
+    containerSize,
+  }: RadarOptionConfig,
 ) => {
   const fontSize = renderingContext.theme.cartesian.label.fontSize;
   const splitLineColor =
@@ -122,6 +109,24 @@ export const getRadarChartOption = (
       .filter((key): key is string => key != null),
   );
 
+  // Compute a radius that attempts to keep axis labels within bounds.
+  // Fallback to percentage when container size is unknown.
+  const AXIS_LABEL_WRAP_PX = 160;
+  // Additional outward space to reserve for numeric datapoint labels around the ring
+  const DATA_LABEL_MARGIN_PX = showLabels ? Math.max(16, Math.round(fontSize * 1.6)) : 6;
+  let computedRadius: number | string = showLegend ? "60%" : "70%";
+  if (containerSize && containerSize.width && containerSize.height) {
+    const { width, height } = containerSize;
+    const halfW = width / 2;
+    const halfH = height / 2;
+    // Space needed horizontally to accommodate wrapped labels
+    const horizMax = Math.max(0, halfW - AXIS_LABEL_WRAP_PX - DATA_LABEL_MARGIN_PX - 12);
+    const vertMax = Math.max(0, halfH - Math.round(fontSize * 1.8) - DATA_LABEL_MARGIN_PX);
+    const maxByBounds = Math.min(horizMax, vertMax);
+    const base = Math.min(width, height) * (showLegend ? 0.4 : 0.45);
+    computedRadius = Math.max(30, Math.min(maxByBounds, base));
+  }
+
   return {
     color: visibleSeries.map((series) => series.color),
     legend: {
@@ -132,12 +137,21 @@ export const getRadarChartOption = (
         ...indicator,
         name: chartModel.dimensions[index]?.name ?? "",
       })),
-      radius: "70%",
+      radius: computedRadius,
       startAngle: 90,
       axisName: {
         color: renderingContext.getColor("text-primary"),
         fontFamily: renderingContext.fontFamily,
         fontSize,
+        // Wrap long labels instead of letting them overflow/crop
+        formatter: (value: string) => `{n|${value}}`,
+        rich: {
+          n: {
+            width: AXIS_LABEL_WRAP_PX, // wrap width in pixels; adjust if needed
+            overflow: "break",
+            lineHeight: Math.round(fontSize * 1.2),
+          },
+        },
       },
       axisLine: {
         lineStyle: {

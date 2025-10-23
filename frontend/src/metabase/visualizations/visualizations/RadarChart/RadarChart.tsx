@@ -1,5 +1,5 @@
 import type { EChartsType } from "echarts/core";
-import { type MouseEvent, useCallback, useMemo, useRef } from "react";
+import { type MouseEvent, useCallback, useMemo, useRef, useState } from "react";
 import { useSet } from "react-use";
 
 import { isNotNull } from "metabase/lib/types";
@@ -89,6 +89,19 @@ export function RadarChart(props: VisualizationProps) {
     [chartModel.series, hiddenSeries],
   );
 
+  // Whether to show the legend. Must be defined before it's used below.
+  const showLegend = settings["radar.show_legend"] !== false;
+
+  // Track container size to compute a safe radius that avoids clipping
+  const [containerSize, setContainerSize] = useState<
+    | { width: number; height: number }
+    | undefined
+  >(undefined);
+
+  const handleResize = useCallback((width: number, height: number) => {
+    setContainerSize({ width, height });
+  }, []);
+
   const option = useMemo(
     () => ({
       ...getRadarChartOption(chartModel, visibleSeries, renderingContext, {
@@ -96,8 +109,15 @@ export function RadarChart(props: VisualizationProps) {
         showLabels: showDataPoints,
         markerSeriesKeys: showDataPoints ? markerSeriesKeys : [],
         formatters,
+        showLegend,
+        containerSize: containerSize,
       }),
-      tooltip: getTooltipOption(containerRef, chartModel, formatters),
+      tooltip: getTooltipOption(
+        containerRef,
+        chartModel,
+        formatters,
+        visibleSeries.map((s) => s.key),
+      ),
     }),
     [
       chartModel,
@@ -106,6 +126,8 @@ export function RadarChart(props: VisualizationProps) {
       formatters,
       showDataPoints,
       markerSeriesKeys,
+      showLegend,
+      containerSize,
     ],
   );
 
@@ -114,8 +136,6 @@ export function RadarChart(props: VisualizationProps) {
   const legendHiddenIndices = chartModel.series
     .map((series, index) => (hiddenSeries.has(series.key) ? index : null))
     .filter(isNotNull);
-
-  const showLegend = settings["radar.show_legend"] !== false;
 
   const handleInit = useCallback((chart: EChartsType) => {
     chartRef.current = chart;
@@ -162,6 +182,7 @@ export function RadarChart(props: VisualizationProps) {
           ref={containerRef}
           option={option}
           onInit={handleInit}
+          onResize={handleResize}
         />
       </ChartWithLegend>
       {radarColorsCss}
